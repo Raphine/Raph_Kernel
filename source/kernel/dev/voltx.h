@@ -131,6 +131,34 @@ public:
       T ReadMmio(uint32_t offset) {
         return *(reinterpret_cast<volatile T*>(_mmioAddr) + offset / sizeof(T));
       }
+
+    // ad-hoc
+    static const uint64_t kDmaSpaceOffset = 0x100000000;  // 64bit region
+    static const uint64_t kDmaSpaceSize   = 0x10000;
+    phys_addr _dma_space_base;
+    uint64_t _dma_space_size = 0;
+
+    bool AllocDmaSpace() {
+      void *p = new uint8_t[kDmaSpaceSize];
+      if (!p) {
+        return false;
+      } else {
+        _dma_space_base = (reinterpret_cast<virt_addr>(p)) + kDmaSpaceOffset;
+        _dma_space_size = kDmaSpaceSize;
+        physmem_ctrl->Reserve(k2p(_dma_space_base), _dma_space_size);
+        return true;
+      }
+    }
+
+    phys_addr AllocFromDmaSpace(uint64_t size) {
+      kassert(_dma_space_size > size);
+      phys_addr addr = _dma_space_base + (kDmaSpaceOffset - _dma_space_size);
+      _dma_space_size -= size;
+
+      // this address is kernel space address
+      // if you would like to obtain physical address, use k2p
+      return addr;
+    }
   };
 
   VoltxEthernet &GetNetInterface() {

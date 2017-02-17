@@ -91,6 +91,9 @@ void Voltx::VoltxEthernet::PollingHandler(Voltx *that) {
 }
 
 void Voltx::VoltxEthernet::Setup() {
+  // ad-hoc DMA space
+  AllocDmaSpace();
+
   // get PCI Base Address Registers
   phys_addr bar = _master.ReadReg<uint32_t>(PciCtrl::kBaseAddressReg0);
   kassert((bar & 0xf) == 0);
@@ -146,7 +149,7 @@ void Voltx::VoltxEthernet::SetupTx() {
   InitTxPacketBuffer();
 
   // set base address of ring buffer
-  virt_addr tx_desc_buf_addr = ((virtmem_ctrl->Alloc(sizeof(VoltxTxDesc) * kTxdescNumber + 15) + 15) / 16) * 16;
+  virt_addr tx_desc_buf_addr = ((AllocFromDmaSpace(sizeof(VoltxTxDesc) * kTxdescNumber + 15) + 15) / 16) * 16;
   _tx_desc_buf = reinterpret_cast<VoltxTxDesc*>(tx_desc_buf_addr);
 
   // Warning: root complex discard 64bit-width data, so you must split
@@ -167,7 +170,7 @@ void Voltx::VoltxEthernet::SetupTx() {
   // initialize rx desc ring buffer
   for(uint32_t i = 0; i < kTxdescNumber; i++) {
     VoltxTxDesc *txdesc = &_tx_desc_buf[i];
-    txdesc->base_address = k2p(virtmem_ctrl->Alloc(kMaxFrameLength));
+    txdesc->base_address = k2p(AllocFromDmaSpace(kMaxFrameLength));
     txdesc->packet_length = 0;
   }
 }
@@ -178,8 +181,8 @@ void Voltx::VoltxEthernet::SetupRx() {
   // set base address of ring buffer
   PhysAddr paddr;
   physmem_ctrl->Alloc(paddr, PagingCtrl::ConvertNumToPageSize(sizeof(VoltxRxDesc) * kRxdescNumber));
-  phys_addr rx_desc_buf_paddr = paddr.GetAddr();
-  virt_addr rx_desc_buf_vaddr = p2v(rx_desc_buf_paddr);
+  virt_addr rx_desc_buf_vaddr = k2p(AllocFromDmaSpace(sizeof(VoltxRxDesc) * kRxdescNumber));
+  phys_addr rx_desc_buf_paddr = p2v(rx_desc_buf_vaddr);
   _rx_desc_buf = reinterpret_cast<VoltxRxDesc*>(rx_desc_buf_vaddr);
 
   // Warning: root complex discard 64bit-width data, so you must split
@@ -199,7 +202,7 @@ void Voltx::VoltxEthernet::SetupRx() {
   // initialize rx desc ring buffer
   for(uint32_t i = 0; i < kRxdescNumber; i++) {
     VoltxRxDesc *rxdesc = &_rx_desc_buf[i];
-    rxdesc->base_address = k2p(virtmem_ctrl->Alloc(kMaxFrameLength));
+    rxdesc->base_address = k2p(AllocFromDmaSpace(kMaxFrameLength));
     rxdesc->packet_length = 0;
     gtty->Cprintf("[voltx] rxdesc[%d].base_address = 0x%p; rxdesc = 0x%p\n",
         i, rxdesc->base_address, v2p(reinterpret_cast<virt_addr>(rxdesc)));
