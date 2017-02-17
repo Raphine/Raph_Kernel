@@ -1,0 +1,8 @@
+show info
+ifconfig
+setip voltx1 192.168.3.100
+wait_until_linkup voltx1
+arp_scan
+beep
+wait 3
+udpsend 192.168.3.12 1234 hogehoge

@@ -34,6 +34,8 @@
 #include <dev/nic/intel/em/lem.h>
 #include <dev/disk/ahci/ahci-raph.h>
 
+#include <dev/voltx.h>
+
 void PciCtrl::_Init() {
   _cpuid = cpu_ctrl->RetainCpuIdForPurpose(CpuPurpose::kLowPriority);
   _mcfg = acpi_ctrl->GetMCFG();
@@ -69,7 +71,7 @@ void PciCtrl::_Init() {
 }
 
 DevPci *PciCtrl::InitPciDevices(uint8_t bus, uint8_t device, uint8_t func) {
-  return _InitPciDevices<IxGbe, E1000, lE1000, DevUhci, DevEhci, /*AhciCtrl,*/ DevPci>(bus, device, func);
+  return _InitPciDevices<Voltx, IxGbe, E1000, lE1000, DevUhci, DevEhci, /*AhciCtrl,*/ DevPci>(bus, device, func);
 }
 
 uint16_t PciCtrl::FindCapability(uint8_t bus, uint8_t device, uint8_t func, CapabilityId id) {
